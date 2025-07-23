@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <title>Calendario de Estudio - Ingeniería Civil</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', sans-serif;
+      background-color: #1e1e2f;
+      color: #f0f0f0;
+    }
+    header {
+      text-align: center;
+      padding: 1rem;
+      background-color: #111;
+      color: #fff;
+      font-size: 1.5rem;
+      user-select: none;
+    }
+    .version {
+      font-size: 0.8rem;
+      margin-top: 0.2rem;
+      color: #aaa;
+    }
+    .calendar {
+      max-width: 1000px;
+      margin: 1rem auto;
+      background-color: #2a2a3d;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+    .calendar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background-color: #111;
+    }
+    .calendar-header button {
+      background-color: #444;
+      border: none;
+      color: #fff;
+      padding: 0.5rem 1rem;
+      cursor: pointer;
+      border-radius: 5px;
+      user-select: none;
+    }
+    .calendar-header span {
+      font-size: 1.2rem;
+      user-select: none;
+    }
+    .days {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      background-color: #1f1f2f;
+    }
+    .day, .day-name {
+      border: 1px solid #333;
+      min-height: 100px;
+      padding: 5px;
+      position: relative;
+      user-select: none;
+    }
+    .day-name {
+      background-color: #111;
+      text-align: center;
+      font-weight: bold;
+      user-select: none;
+    }
+    .study-label {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 5px;
+      margin: 2px 0;
+      color: #fff;
+      font-size: 0.8rem;
+      cursor: pointer;
+      position: relative;
+      user-select: none;
+    }
+    .tooltip {
+      position: absolute;
+      background-color: #000;
+      color: #fff;
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 0.8rem;
+      top: 100%;
+      left: 0;
+      z-index: 10;
+      display: none;
+      white-space: pre-line;
+      user-select: none;
+      width: max-content;
+      max-width: 250px;
+    }
+    /* Modal overlay */
+    .modal {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 20;
+    }
+    .modal-content {
+      background-color: #2a2a3d;
+      padding: 1rem;
+      border-radius: 10px;
+      width: 350px;
+      max-height: 90vh;
+      overflow-y: auto;
+      user-select: none;
+    }
+    .modal-content h3 {
+      margin-top: 0;
+      user-select: none;
+    }
+    .modal-content label {
+      display: block;
+      margin-bottom: 0.3rem;
+      user-select: none;
+    }
+    .modal-content input, .modal-content textarea, .modal-content select {
+      width: 100%;
+      margin-bottom: 1rem;
+      padding: 0.5rem;
+      border-radius: 5px;
+      border: none;
+      background-color: #444;
+      color: white;
+      user-select: text;
+      box-sizing: border-box;
+    }
+    .modal-content button {
+      background-color: #3498db;
+      border: none;
+      padding: 0.5rem;
+      color: white;
+      cursor: pointer;
+      border-radius: 5px;
+      width: 100%;
+      user-select: none;
+      font-size: 1rem;
+    }
+    .modal-content button.cancel {
+      background-color: #666;
+      margin-top: 0.5rem;
+    }
+    .record-list {
+      margin-bottom: 1rem;
+      max-height: 200px;
+      overflow-y: auto;
+      border: 1px solid #444;
+      padding: 5px;
+      border-radius: 5px;
+      background: #222240;
+    }
+    .record-item {
+      background: #333355;
+      margin: 5px 0;
+      padding: 5px;
+      border-radius: 5px;
+      position: relative;
+      font-size: 0.9rem;
+    }
+    .record-item span {
+      display: block;
+      margin-bottom: 3px;
+    }
+    .record-buttons {
+      position: absolute;
+      top: 5px;
+      right: 5px;
+      display: flex;
+      gap: 5px;
+    }
+    .record-buttons button {
+      background: #555;
+      border: none;
+      color: white;
+      border-radius: 3px;
+      padding: 2px 6px;
+      cursor: pointer;
+      font-size: 0.75rem;
+      user-select: none;
+    }
+    .record-buttons button:hover {
+      background: #777;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    📚 Calendario de Estudio - Ingeniería Civil
+    <div class="version">v1.2</div>
+  </header>
+  <div class="calendar">
+    <div class="calendar-header">
+      <button onclick="changeMonth(-1)">◀</button>
+      <span id="monthYear"></span>
+      <button onclick="changeMonth(1)">▶</button>
+    </div>
+    <div class="days" id="calendarDays"></div>
+  </div>
+
+  <div id="modal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <h3 id="modalTitle">Agregar Estudio</h3>
+
+      <div id="recordList" class="record-list" style="display:none;"></div>
+
+      <label for="studyTime">Horas estudiadas</label>
+      <input type="number" id="studyTime" min="0" step="0.25" placeholder="Ej: 1.5" />
+      <label for="studyTopic">Tema estudiado</label>
+      <textarea id="studyTopic" rows="2" placeholder="Tema..."></textarea>
+      <label for="subject">Materia(s) (selección múltiple)</label>
+      <select id="subject" multiple size="5">
+        <option value="Física 2">Física 2</option>
+        <option value="Sistemas de Representación">Sistemas de Representación</option>
+        <option value="Módulo de Inglés">Módulo de Inglés</option>
+        <option value="Economía">Economía</option>
+        <option value="Probabilidad y Estadística">Probabilidad y Estadística</option>
+        <option value="Análisis Matemático 2">Análisis Matemático 2</option>
+        <option value="Computación y Cálculo Numérico">Computación y Cálculo Numérico</option>
+      </select>
+
+      <button id="saveBtn" onclick="saveStudy()">Guardar</button>
+      <button class="cancel" onclick="closeModal()">Cancelar</button>
+    </div>
+  </div>
+
+  <script>
+    const subjectColors = {
+      "Física 2": "#3498db",
+      "Sistemas de Representación": "#e67e22",
+      "Módulo de Inglés": "#2ecc71",
+      "Economía": "#f1c40f",
+      "Probabilidad y Estadística": "#e74c3c",
+      "Análisis Matemático 2": "#9b59b6",
+      "Computación y Cálculo Numérico": "#1abc9c"
+    };
+
+    let currentDate = new Date(2025, 7); // Agosto 2025
+    let selectedDate = null;
+    let editingRecord = null;
+
+    function renderCalendar() {
+      const days = document.getElementById('calendarDays');
+      const monthYear = document.getElementById('monthYear');
+      days.innerHTML = '';
+      monthYear.textContent = currentDate.toLocaleDateString('es-AR', { month: 'long', year: 'numeric' });
+
+      const dayNames = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+      dayNames.forEach(d => {
+        const dn = document.createElement('div');
+        dn.className = 'day-name';
+        dn.textContent = d;
+        days.appendChild(dn);
+      });
+
+      const start = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+      const end = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);
+      const offset = (start.getDay() + 6) % 7;
+
+      for (let i = 0; i < offset; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'day';
+        days.appendChild(empty);
+      }
+
+      for (let d = 1; d <= end.getDate(); d++) {
+        const day = document.createElement('div');
+        day.className = 'day';
+        day.textContent = d;
+
+        const dateKey = `${currentDate.getFullYear()}-${String(currentDate.getMonth()+1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        const records = JSON.parse(localStorage.getItem(dateKey) || '[]');
+
+        records.forEach((r, i) => {
+          const label = document.createElement('div');
+          label.className = 'study-label';
+          label.textContent = r.materia;
+          label.style.backgroundColor = subjectColors[r.materia];
+
+          const tooltip = document.createElement('div');
+          tooltip.className = 'tooltip';
+          tooltip.textContent = `⏱ ${r.hora} horas\n📚 ${r.tema}`;
+          label.appendChild(tooltip);
+
+          label.onmouseenter = () => tooltip.style.display = 'block';
+          label.onmouseleave = () => tooltip.style.display = 'none';
+          label.onclick = (e) => {
+            e.stopPropagation(); // no active el modal de día
+            alert(`${r.materia}\n⏱ ${r.hora} horas\n📚 ${r.tema}`);
+          };
+
+          day.appendChild(label);
+        });
+
+        day.onclick = () => openModal(dateKey);
+        days.appendChild(day);
+      }
+    }
+
+    function changeMonth(diff) {
+      currentDate.setMonth(currentDate.getMonth() + diff);
+      if (currentDate.getMonth() < 7) currentDate.setMonth(7);
+      if (currentDate.getMonth() > 11) currentDate.setMonth(11);
+      renderCalendar();
+    }
+
+    function openModal(dateKey) {
+      selectedDate = dateKey;
+      editingRecord = null;
+      const modal = document.getElementById('modal');
+      const recordList = document.getElementById('recordList');
+      const studyTime = document.getElementById('studyTime');
+      const studyTopic = document.getElementById('studyTopic');
+      const subjectSelect = document.getElementById('subject');
+      const modalTitle = document.getElementById('modalTitle');
+      const saveBtn = document.getElementById('saveBtn');
+
+      // Reset form
+      studyTime.value = '';
+      studyTopic.value = '';
+      subjectSelect.selectedIndex = -1;
+      modalTitle.textContent = `Registros para ${dateKey}`;
+      recordList.innerHTML = '';
+
+      // List existing records if any
+      const records = JSON.parse(localStorage.getItem(dateKey) || '[]');
+      if (records.length) {
+        recordList.style.display = 'block';
+        records.forEach((rec, i) => {
+          const div = document.createElement('div');
+          div.className = 'record-item';
+
+          const materiasStr = rec.materia;
+          div.innerHTML = `
+            <span><strong>Materia:</strong> ${materiasStr}</span>
+            <span><strong>Horas:</strong> ${rec.hora}</span>
+            <span><strong>Tema:</strong> ${rec.tema}</span>
+            <div class="record-buttons">
+              <button onclick="editRecord(${i})" title="Editar">&#9998;</button>
+              <button onclick="deleteRecord(${i})" title="Eliminar">&times;</button>
+            </div>
+          `;
+          recordList.appendChild(div);
+        });
+      } else {
+        recordList.style.display = 'none';
+      }
+
+      modal.style.display = 'flex';
+      studyTime.focus();
+      saveBtn.textContent = 'Agregar';
+    }
+
+    function closeModal() {
+      document.getElementById('modal').style.display = 'none';
+      editingRecord = null;
+    }
+
+    function saveStudy() {
+      const studyTime = document.getElementById('studyTime').value.trim();
+      const studyTopic = document.getElementById('studyTopic').value.trim();
+      const subjectSelect = document.getElementById('subject');
+      const selectedOptions = Array.from(subjectSelect.selectedOptions).map(o => o.value);
+
+      if (!studyTime || studyTime <= 0 || !studyTopic || selectedOptions.length === 0) {
+        alert('Completa todos los campos correctamente.');
+        return;
+      }
+
+      let records = JSON.parse(localStorage.getItem(selectedDate) || '[]');
+
+      if (editingRecord !== null) {
+        // Modificar registro existente
+        records[editingRecord] = {
+          hora: studyTime,
+          tema: studyTopic,
+          materia: selectedOptions[0]  // Para edición sólo una materia a la vez
+        };
+      } else {
+        // Agregar uno o más registros (uno por materia seleccionada)
+        selectedOptions.forEach(materia => {
+          records.push({
+            hora: studyTime,
+            tema: studyTopic,
+            materia
+          });
+        });
+      }
+
+      localStorage.setItem(selectedDate, JSON.stringify(records));
+      closeModal();
+      renderCalendar();
+    }
+
+    function editRecord(index) {
+      const records = JSON.parse(localStorage.getItem(selectedDate) || '[]');
+      if (!records[index]) return;
+      editingRecord = index;
+
+      const rec = records[index];
+      const studyTime = document.getElementById('studyTime');
+      const studyTopic = document.getElementById('studyTopic');
+      const subjectSelect = document.getElementById('subject');
+      const saveBtn = document.getElementById('saveBtn');
+      const modalTitle = document.getElementById('modalTitle');
+      const recordList = document.getElementById('recordList');
+
+      studyTime.value = rec.hora;
+      studyTopic.value = rec.tema;
+
+      // Sólo se puede editar una materia a la vez en edición
+      for (let i = 0; i < subjectSelect.options.length; i++) {
+        subjectSelect.options[i].selected = subjectSelect.options[i].value === rec.materia;
+      }
+
+      modalTitle.textContent = `Editar registro para ${selectedDate}`;
+      saveBtn.textContent = 'Guardar Cambios';
+
+      // Scroll modal list to top so the form is visible
+      recordList.scrollIntoView({behavior: 'smooth'});
+    }
+
+    function deleteRecord(index) {
+      if (!confirm('¿Querés eliminar este registro?')) return;
+
+      let records = JSON.parse(localStorage.getItem(selectedDate) || '[]');
+      records.splice(index, 1);
+      localStorage.setItem(selectedDate, JSON.stringify(records));
+
+      openModal(selectedDate);
+      renderCalendar();
+    }
+
+    // Inicializa
+    renderCalendar();
+  </script>
+</body>
+</html>
